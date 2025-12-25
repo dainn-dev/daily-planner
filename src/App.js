@@ -16,6 +16,8 @@ import SettingsPage from './pages/SettingsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminUserDetailPage from './pages/AdminUserDetailPage';
+import AdminLogsPage from './pages/AdminLogsPage';
+import AdminLogDetailPage from './pages/AdminLogDetailPage';
 
 function App() {
   return (
@@ -38,9 +40,12 @@ function App() {
         <Route path="/settings/goals" element={<SettingsPage />} />
         <Route path="/settings/notification" element={<SettingsPage />} />
         <Route path="/settings/security" element={<SettingsPage />} />
+        <Route path="/settings/logs" element={<SettingsPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
+        <Route path="/admin/logs" element={<AdminLogsPage />} />
+        <Route path="/admin/logs/:fileName" element={<AdminLogDetailPage />} />
       </Routes>
     </Router>
   );

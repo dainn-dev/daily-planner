@@ -13,6 +13,7 @@ import {
   INITIAL_PLANS_SETTINGS,
   INITIAL_NOTIFICATION_SETTINGS,
   INITIAL_SECURITY_SETTINGS,
+  INITIAL_LOGS_SETTINGS,
   SETTINGS_MENU_ITEMS,
   SETTINGS_ROUTES,
 } from '../constants/settings';
@@ -37,6 +38,7 @@ const SettingsPage = () => {
   const [plansSettings, setPlansSettings] = useState(INITIAL_PLANS_SETTINGS);
   const [notificationSettings, setNotificationSettings] = useState(INITIAL_NOTIFICATION_SETTINGS);
   const [securitySettings, setSecuritySettings] = useState(INITIAL_SECURITY_SETTINGS);
+  const [logsSettings, setLogsSettings] = useState(INITIAL_LOGS_SETTINGS);
   const [notifications, setNotifications] = useState([
       {
         id: 1,
@@ -84,6 +86,7 @@ const SettingsPage = () => {
   const handlePlansSettingChange = createHandler(setPlansSettings);
   const handleNotificationSettingChange = createHandler(setNotificationSettings);
   const handleSecuritySettingChange = createHandler(setSecuritySettings);
+  const handleLogsSettingChange = createHandler(setLogsSettings);
 
   const handleSave = () => {
     // Handle save logic here
@@ -93,6 +96,7 @@ const SettingsPage = () => {
     console.log('Saving plans settings:', plansSettings);
     console.log('Saving notification settings:', notificationSettings);
     console.log('Saving security settings:', securitySettings);
+    console.log('Saving logs settings:', logsSettings);
   };
 
   const handleCancel = () => {
@@ -103,6 +107,7 @@ const SettingsPage = () => {
     setPlansSettings(INITIAL_PLANS_SETTINGS);
     setNotificationSettings(INITIAL_NOTIFICATION_SETTINGS);
     setSecuritySettings(INITIAL_SECURITY_SETTINGS);
+    setLogsSettings(INITIAL_LOGS_SETTINGS);
   };
 
   const handleLogoutDevice = (deviceId) => {
@@ -1095,8 +1100,269 @@ const SettingsPage = () => {
               </div>
             )}
 
+            {/* Logs Settings Tab */}
+            {activeTab === 'logs' && (
+              <div className="flex flex-col gap-10">
+                <div className="flex flex-col gap-2 pb-6 border-b border-border-light">
+                  <h1 className="text-2xl font-light tracking-tight text-zinc-900">Cài đặt Nhật ký</h1>
+                  <p className="text-secondary text-sm font-normal leading-relaxed max-w-lg">
+                    Quản lý cài đặt nhật ký hoạt động, lưu trữ và xuất dữ liệu nhật ký của bạn.
+                  </p>
+                </div>
+
+                {/* Log Level Section */}
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h3 className="text-base font-semibold text-zinc-900">Mức độ nhật ký</h3>
+                    <p className="text-sm text-secondary mt-1">Chọn mức độ chi tiết của nhật ký được ghi lại.</p>
+                  </div>
+                  <div className="max-w-md">
+                    <FormSelect
+                      label="Mức độ nhật ký"
+                      value={logsSettings.logLevel}
+                      onChange={(e) => handleLogsSettingChange('logLevel', e.target.value)}
+                      options={[
+                        { value: 'debug', label: 'Debug - Tất cả thông tin chi tiết' },
+                        { value: 'info', label: 'Info - Thông tin chung (Khuyến nghị)' },
+                        { value: 'warn', label: 'Warning - Chỉ cảnh báo và lỗi' },
+                        { value: 'error', label: 'Error - Chỉ lỗi' },
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                <div className="w-full h-px bg-zinc-100"></div>
+
+                {/* Log Retention Section */}
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h3 className="text-base font-semibold text-zinc-900">Lưu trữ nhật ký</h3>
+                    <p className="text-sm text-secondary mt-1">Cài đặt thời gian lưu trữ nhật ký trước khi tự động xóa.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 max-w-4xl">
+                    <div>
+                      <label className="text-sm font-medium text-zinc-900 mb-2 block" htmlFor="log-retention">
+                        Thời gian lưu trữ (ngày)
+                      </label>
+                      <input
+                        className="w-full bg-white border border-border-light rounded-lg px-3 py-2.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder-zinc-400"
+                        id="log-retention"
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={logsSettings.logRetentionDays}
+                        onChange={(e) => handleLogsSettingChange('logRetentionDays', e.target.value)}
+                      />
+                      <p className="text-xs text-secondary mt-1">Nhật ký cũ hơn sẽ tự động bị xóa.</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-zinc-900 mb-2 block" htmlFor="max-log-size">
+                        Kích thước tệp tối đa (MB)
+                      </label>
+                      <input
+                        className="w-full bg-white border border-border-light rounded-lg px-3 py-2.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder-zinc-400"
+                        id="max-log-size"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={logsSettings.maxLogFileSize}
+                        onChange={(e) => handleLogsSettingChange('maxLogFileSize', e.target.value)}
+                      />
+                      <p className="text-xs text-secondary mt-1">Tệp nhật ký sẽ được tách khi đạt kích thước này.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full h-px bg-zinc-100"></div>
+
+                {/* Log Types Section */}
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h3 className="text-base font-semibold text-zinc-900">Loại nhật ký</h3>
+                    <p className="text-sm text-secondary mt-1">Chọn các loại nhật ký bạn muốn ghi lại.</p>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-start md:items-center justify-between gap-4 p-4 bg-white border border-border-light rounded-lg">
+                      <div>
+                        <h4 className="text-sm font-semibold text-zinc-900">Nhật ký hoạt động</h4>
+                        <p className="text-xs text-secondary mt-1">Ghi lại các hoạt động và thay đổi trong tài khoản của bạn.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          className="sr-only peer"
+                          type="checkbox"
+                          checked={logsSettings.enableActivityLogs}
+                          onChange={(e) => handleLogsSettingChange('enableActivityLogs', e.target.checked)}
+                        />
+                        <div className="w-10 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-zinc-900"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-start md:items-center justify-between gap-4 p-4 bg-white border border-border-light rounded-lg">
+                      <div>
+                        <h4 className="text-sm font-semibold text-zinc-900">Nhật ký lỗi</h4>
+                        <p className="text-xs text-secondary mt-1">Ghi lại các lỗi và sự cố hệ thống để khắc phục.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          className="sr-only peer"
+                          type="checkbox"
+                          checked={logsSettings.enableErrorLogs}
+                          onChange={(e) => handleLogsSettingChange('enableErrorLogs', e.target.checked)}
+                        />
+                        <div className="w-10 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-zinc-900"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-start md:items-center justify-between gap-4 p-4 bg-white border border-border-light rounded-lg">
+                      <div>
+                        <h4 className="text-sm font-semibold text-zinc-900">Nhật ký truy cập</h4>
+                        <p className="text-xs text-secondary mt-1">Ghi lại thông tin đăng nhập và truy cập tài khoản.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          className="sr-only peer"
+                          type="checkbox"
+                          checked={logsSettings.enableAccessLogs}
+                          onChange={(e) => handleLogsSettingChange('enableAccessLogs', e.target.checked)}
+                        />
+                        <div className="w-10 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-zinc-900"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full h-px bg-zinc-100"></div>
+
+                {/* Export Settings Section */}
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h3 className="text-base font-semibold text-zinc-900">Xuất nhật ký</h3>
+                    <p className="text-sm text-secondary mt-1">Cài đặt tự động xuất và gửi nhật ký.</p>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-start md:items-center justify-between gap-4 p-4 bg-white border border-border-light rounded-lg">
+                      <div>
+                        <h4 className="text-sm font-semibold text-zinc-900">Tự động xuất nhật ký</h4>
+                        <p className="text-xs text-secondary mt-1">Tự động xuất nhật ký theo lịch trình định kỳ.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          className="sr-only peer"
+                          type="checkbox"
+                          checked={logsSettings.autoExportLogs}
+                          onChange={(e) => handleLogsSettingChange('autoExportLogs', e.target.checked)}
+                        />
+                        <div className="w-10 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-zinc-900"></div>
+                      </label>
+                    </div>
+                    {logsSettings.autoExportLogs && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 max-w-4xl pl-4">
+                        <div>
+                          <label className="text-sm font-medium text-zinc-900 mb-2 block" htmlFor="export-frequency">
+                            Tần suất xuất
+                          </label>
+                          <FormSelect
+                            value={logsSettings.exportFrequency}
+                            onChange={(e) => handleLogsSettingChange('exportFrequency', e.target.value)}
+                            options={[
+                              { value: 'daily', label: 'Hàng ngày' },
+                              { value: 'weekly', label: 'Hàng tuần' },
+                              { value: 'monthly', label: 'Hàng tháng' },
+                            ]}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-zinc-900 mb-2 block" htmlFor="log-format">
+                            Định dạng
+                          </label>
+                          <FormSelect
+                            value={logsSettings.logFormat}
+                            onChange={(e) => handleLogsSettingChange('logFormat', e.target.value)}
+                            options={[
+                              { value: 'json', label: 'JSON' },
+                              { value: 'csv', label: 'CSV' },
+                              { value: 'txt', label: 'TXT' },
+                            ]}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-start md:items-center justify-between gap-4 p-4 bg-white border border-border-light rounded-lg">
+                      <div>
+                        <h4 className="text-sm font-semibold text-zinc-900">Gửi nhật ký qua email</h4>
+                        <p className="text-xs text-secondary mt-1">Tự động gửi nhật ký xuất đến địa chỉ email của bạn.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          className="sr-only peer"
+                          type="checkbox"
+                          checked={logsSettings.sendLogsToEmail}
+                          onChange={(e) => handleLogsSettingChange('sendLogsToEmail', e.target.checked)}
+                        />
+                        <div className="w-10 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-zinc-900"></div>
+                      </label>
+                    </div>
+                    {logsSettings.sendLogsToEmail && (
+                      <div className="max-w-md pl-4">
+                        <label className="text-sm font-medium text-zinc-900 mb-2 block" htmlFor="email-logs">
+                          Địa chỉ email
+                        </label>
+                        <input
+                          className="w-full bg-white border border-border-light rounded-lg px-3 py-2.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder-zinc-400"
+                          id="email-logs"
+                          type="email"
+                          placeholder="email@example.com"
+                          value={logsSettings.emailForLogs}
+                          onChange={(e) => handleLogsSettingChange('emailForLogs', e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="w-full h-px bg-zinc-100"></div>
+
+                {/* Compression Section */}
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-start md:items-center justify-between gap-4 p-4 bg-white border border-border-light rounded-lg">
+                    <div>
+                      <h4 className="text-sm font-semibold text-zinc-900">Nén nhật ký cũ</h4>
+                      <p className="text-xs text-secondary mt-1">Tự động nén các tệp nhật ký cũ để tiết kiệm dung lượng lưu trữ.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        className="sr-only peer"
+                        type="checkbox"
+                        checked={logsSettings.compressOldLogs}
+                        onChange={(e) => handleLogsSettingChange('compressOldLogs', e.target.checked)}
+                      />
+                      <div className="w-10 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-zinc-900"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-8 mt-4 border-t border-border-light">
+                  <button
+                    onClick={handleCancel}
+                    className="px-6 py-2.5 rounded-lg border border-border-light text-zinc-500 font-medium text-sm hover:bg-zinc-50 transition-colors w-full sm:w-auto"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSave();
+                      console.log('Saving logs settings:', logsSettings);
+                    }}
+                    className="px-6 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm shadow-sm transition-all w-full sm:w-auto"
+                  >
+                    Lưu thay đổi
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Other tabs content */}
-            {activeTab !== 'profile' && activeTab !== 'general' && activeTab !== 'plans' && activeTab !== 'notifications' && activeTab !== 'security' && (
+            {activeTab !== 'profile' && activeTab !== 'general' && activeTab !== 'plans' && activeTab !== 'notifications' && activeTab !== 'security' && activeTab !== 'logs' && (
               <div className="flex flex-col gap-10">
                 <div className="flex flex-col gap-2 pb-6 border-b border-border-light">
                   <h1 className="text-2xl font-light tracking-tight text-zinc-900">
