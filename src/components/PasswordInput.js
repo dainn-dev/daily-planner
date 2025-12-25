@@ -36,13 +36,6 @@ const PasswordInput = ({
     }
   };
 
-  const getPasswordStrengthLabel = (strength) => {
-    if (strength < 25) return { label: 'Yếu', color: 'bg-red-500' };
-    if (strength < 50) return { label: 'Trung bình', color: 'bg-yellow-500' };
-    if (strength < 75) return { label: 'Khá', color: 'bg-blue-500' };
-    return { label: 'Mạnh', color: 'bg-green-500' };
-  };
-
   return (
     <div className="flex flex-col gap-2">
       {label && (

@@ -13,9 +13,9 @@ const TermsHeader = () => {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-            <a className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors" href="#">
+            <button className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
               Tính năng
-            </a>
+            </button>
             <Link to="/login" className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
               Đăng nhập
             </Link>

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
 
 const AdminLogDetailPage = () => {
   const { fileName } = useParams();
@@ -10,22 +9,10 @@ const AdminLogDetailPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [logContent, setLogContent] = useState(null);
   const [logFile, setLogFile] = useState(null);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'system',
-      title: 'Log File View',
-      message: 'Viewing log file details',
-      time: 'Vừa xong',
-      unread: true,
-      icon: 'description',
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-primary'
-    }
-  ]);
+
 
   // Mock log files data - in a real app, this would come from an API
-  const logFiles = [
+  const logFiles = useMemo(() => [
     {
       name: 'server-error-2023-10-27.log',
       displayName: 'server-error-2023-10-27.log',
@@ -58,7 +45,7 @@ const AdminLogDetailPage = () => {
         { line: 20, level: 'INFO', text: '2023-10-27 08:20:02 - Removed 45 temporary files' },
       ]
     }
-  ];
+  ], []);
 
   useEffect(() => {
     // Decode the file name from URL
@@ -72,7 +59,7 @@ const AdminLogDetailPage = () => {
       // Log file not found, redirect to logs page
       navigate('/admin/logs');
     }
-  }, [fileName, navigate]);
+  }, [fileName, navigate, logFiles]);
 
   const getLevelColor = (level) => {
     switch (level) {
@@ -93,17 +80,6 @@ const AdminLogDetailPage = () => {
         return 'bg-red-50 dark:bg-red-900/10';
       case 'WARN':
         return 'bg-yellow-50 dark:bg-yellow-900/10';
-      default:
-        return '';
-    }
-  };
-
-  const getLineBorder = (level) => {
-    switch (level) {
-      case 'ERROR':
-        return 'border-red-500';
-      case 'WARN':
-        return 'border-yellow-500';
       default:
         return '';
     }
@@ -267,7 +243,6 @@ const AdminLogDetailPage = () => {
                   <div className="min-w-max text-slate-800 dark:text-slate-300">
                     {logContent.map((line) => {
                       const lineBg = getLineBg(line.level);
-                      const lineBorder = getLineBorder(line.level);
                       const levelColor = getLevelColor(line.level);
                       const isStackTrace = line.text.startsWith('at ');
                       

@@ -13,12 +13,12 @@ const PrivacyPolicyHeader = () => {
           <Link to="/" className="hover:text-blue-600 transition-colors">
             Trang chủ
           </Link>
-          <a className="hover:text-blue-600 transition-colors" href="#">
+          <button className="hover:text-blue-600 transition-colors">
             Tính năng
-          </a>
-          <a className="hover:text-blue-600 transition-colors" href="#">
+          </button>
+          <button className="hover:text-blue-600 transition-colors">
             Biểu giá
-          </a>
+          </button>
           <Link to="/login" className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">
             Đăng nhập
           </Link>
