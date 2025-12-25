@@ -5,6 +5,7 @@ import ContactFooter from '../components/ContactFooter';
 import ErrorMessage from '../components/ErrorMessage';
 import SuccessMessage from '../components/SuccessMessage';
 import { validateEmail, validateName, validateMessage } from '../utils/formValidation';
+import { contactAPI } from '../services/api';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -50,15 +51,17 @@ const ContactPage = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // await submitContactForm(formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccessMessage('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi trong thời gian sớm nhất.');
-      setFormData({ name: '', email: '', message: '' });
+      const response = await contactAPI.submitContact(formData);
+      if (response.success) {
+        setSuccessMessage(response.message || 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi trong thời gian sớm nhất.');
+        setFormData({ name: '', email: '', message: '' });
+      }
     } catch (error) {
-      setErrors({ submit: error.message || 'Không thể gửi tin nhắn. Vui lòng thử lại sau.' });
+      if (error.errors) {
+        setErrors(error.errors);
+      } else {
+        setErrors({ submit: error.message || 'Không thể gửi tin nhắn. Vui lòng thử lại sau.' });
+      }
     } finally {
       setIsSubmitting(false);
     }

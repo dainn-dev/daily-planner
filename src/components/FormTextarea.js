@@ -5,14 +5,34 @@ const FormTextarea = ({
   label,
   value,
   onChange,
+  onBlur,
   placeholder,
   required = false,
   error,
+  validate,
   rows = 4,
   maxLength,
   className = '',
   ...props
 }) => {
+  const handleBlur = (e) => {
+    if (onBlur) {
+      onBlur(e);
+    }
+    // Auto-validate on blur if validate function is provided
+    if (validate && !error) {
+      const validationError = validate(value);
+      if (validationError && onChange) {
+        // Trigger validation by calling onChange with current value
+        const syntheticEvent = {
+          target: { name: id, value, type: 'textarea' },
+          preventDefault: () => {},
+        };
+        onChange(syntheticEvent);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       {label && (
@@ -31,6 +51,7 @@ const FormTextarea = ({
         rows={rows}
         value={value}
         onChange={onChange}
+        onBlur={handleBlur}
         required={required}
         maxLength={maxLength}
         aria-invalid={error ? 'true' : 'false'}

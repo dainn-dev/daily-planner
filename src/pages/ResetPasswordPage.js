@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import PasswordInput from '../components/PasswordInput';
 import ErrorMessage from '../components/ErrorMessage';
 import SuccessMessage from '../components/SuccessMessage';
 import { validatePassword, validateConfirmPassword } from '../utils/formValidation';
+import { authAPI } from '../services/api';
 
 const ResetPasswordPage = () => {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -66,17 +69,24 @@ const ResetPasswordPage = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // await resetPassword(formData.password);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccessMessage('Mật khẩu đã được đặt lại thành công! Đang chuyển hướng...');
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500);
+      if (!token) {
+        setErrors({ submit: 'Token không hợp lệ. Vui lòng kiểm tra lại liên kết.' });
+        return;
+      }
+
+      const response = await authAPI.resetPassword(token, formData.password, formData.confirmPassword);
+      if (response.success) {
+        setSuccessMessage(response.message || 'Mật khẩu đã được đặt lại thành công! Đang chuyển hướng...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
+      }
     } catch (error) {
-      setErrors({ submit: error.message || 'Không thể đặt lại mật khẩu. Vui lòng thử lại.' });
+      if (error.errors) {
+        setErrors(error.errors);
+      } else {
+        setErrors({ submit: error.message || 'Không thể đặt lại mật khẩu. Vui lòng thử lại.' });
+      }
     } finally {
       setIsSubmitting(false);
     }

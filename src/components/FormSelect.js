@@ -5,13 +5,33 @@ const FormSelect = ({
   label,
   value,
   onChange,
+  onBlur,
   options = [],
   required = false,
   error,
+  validate,
   className = '',
   placeholder,
   ...props
 }) => {
+  const handleBlur = (e) => {
+    if (onBlur) {
+      onBlur(e);
+    }
+    // Auto-validate on blur if validate function is provided
+    if (validate && !error) {
+      const validationError = validate(value);
+      if (validationError && onChange) {
+        // Trigger validation by calling onChange with current value
+        const syntheticEvent = {
+          target: { name: id, value, type: 'select-one' },
+          preventDefault: () => {},
+        };
+        onChange(syntheticEvent);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       {label && (
@@ -29,6 +49,7 @@ const FormSelect = ({
           id={id}
           value={value}
           onChange={onChange}
+          onBlur={handleBlur}
           required={required}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${id}-error` : undefined}

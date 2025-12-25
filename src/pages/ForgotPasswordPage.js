@@ -4,6 +4,7 @@ import PublicHeader from '../components/PublicHeader';
 import ErrorMessage from '../components/ErrorMessage';
 import SuccessMessage from '../components/SuccessMessage';
 import { validateEmail } from '../utils/formValidation';
+import { authAPI } from '../services/api';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -25,12 +26,10 @@ const ForgotPasswordPage = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // await sendPasswordResetEmail(email);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccessMessage('Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư của bạn.');
+      const response = await authAPI.forgotPassword(email);
+      if (response.success) {
+        setSuccessMessage(response.message || 'Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư của bạn.');
+      }
     } catch (err) {
       setError(err.message || 'Không thể gửi email. Vui lòng thử lại sau.');
     } finally {

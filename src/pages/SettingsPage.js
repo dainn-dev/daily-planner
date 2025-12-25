@@ -6,6 +6,13 @@ import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
 import FormTextarea from '../components/FormTextarea';
 import Toggle from '../components/Toggle';
+import WarningMessage from '../components/WarningMessage';
+import {
+  validateName,
+  validateEmail,
+  validateText,
+  validateDescription,
+} from '../utils/formValidation';
 import {
   INITIAL_PROFILE_FORM,
   INITIAL_SETTINGS,
@@ -39,6 +46,8 @@ const SettingsPage = () => {
   const [notificationSettings, setNotificationSettings] = useState(INITIAL_NOTIFICATION_SETTINGS);
   const [securitySettings, setSecuritySettings] = useState(INITIAL_SECURITY_SETTINGS);
   const [logsSettings, setLogsSettings] = useState(INITIAL_LOGS_SETTINGS);
+  const [profileErrors, setProfileErrors] = useState({});
+  const [warningMessage, setWarningMessage] = useState('');
   const [notifications, setNotifications] = useState([
       {
         id: 1,
@@ -88,7 +97,54 @@ const SettingsPage = () => {
   const handleSecuritySettingChange = createHandler(setSecuritySettings);
   const handleLogsSettingChange = createHandler(setLogsSettings);
 
+  const showWarning = (message = 'Thay đổi đã được lưu thành công.') => {
+    setWarningMessage(message);
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setWarningMessage('');
+    }, 3000);
+  };
+
+  const handleProfileBlur = (field, value) => {
+    // Validate on blur
+    const errors = { ...profileErrors };
+    switch (field) {
+      case 'fullname':
+        errors.fullname = validateName(value, true, 2, 255);
+        break;
+      case 'email':
+        errors.email = validateEmail(value, true);
+        break;
+      case 'job':
+        errors.job = validateText(value, 'Nghề nghiệp', false, 1, 100);
+        break;
+      case 'bio':
+        errors.bio = validateDescription(value, false, 150);
+        break;
+      default:
+        break;
+    }
+    setProfileErrors(errors);
+  };
+
   const handleSave = () => {
+    // Validate profile form
+    const errors = {};
+    errors.fullname = validateName(profileForm.fullname, true, 2, 255);
+    errors.email = validateEmail(profileForm.email, true);
+    errors.job = validateText(profileForm.job, 'Nghề nghiệp', false, 1, 100);
+    errors.bio = validateDescription(profileForm.bio, false, 150);
+
+    // Check if there are any errors
+    const hasErrors = Object.values(errors).some(error => error !== null);
+    if (hasErrors) {
+      setProfileErrors(errors);
+      return;
+    }
+
+    // Show warning
+    showWarning();
+
     // Handle save logic here
     console.log('Saving profile:', profileForm);
     console.log('Saving settings:', settings);
@@ -108,9 +164,11 @@ const SettingsPage = () => {
     setNotificationSettings(INITIAL_NOTIFICATION_SETTINGS);
     setSecuritySettings(INITIAL_SECURITY_SETTINGS);
     setLogsSettings(INITIAL_LOGS_SETTINGS);
+    setProfileErrors({});
   };
 
   const handleLogoutDevice = (deviceId) => {
+    showWarning();
     setSecuritySettings(prev => ({
       ...prev,
       devices: prev.devices.filter(device => device.id !== deviceId)
@@ -132,6 +190,7 @@ const SettingsPage = () => {
         return;
       }
       
+      showWarning();
       setSelectedImage(file);
       
       // Create preview
@@ -145,6 +204,7 @@ const SettingsPage = () => {
 
   const handleUploadImage = () => {
     if (selectedImage) {
+      showWarning();
       // Handle image upload logic here
       console.log('Uploading image:', selectedImage);
       // Reset and close modal
@@ -266,6 +326,12 @@ const SettingsPage = () => {
                     Quản lý thông tin cá nhân và cách bạn xuất hiện trên MyPlanner.
                   </p>
                 </div>
+                {warningMessage && (
+                  <WarningMessage 
+                    message={warningMessage} 
+                    onClose={() => setWarningMessage('')}
+                  />
+                )}
 
                 {/* Avatar Section */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-8">
@@ -288,12 +354,18 @@ const SettingsPage = () => {
                     </div>
                     <div className="flex gap-3">
                       <button 
-                        onClick={() => setUploadImageModalOpen(true)}
+                        onClick={() => {
+                          showWarning();
+                          setUploadImageModalOpen(true);
+                        }}
                         className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                       >
                         Tải ảnh mới
                       </button>
-                      <button className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-900 text-sm font-medium rounded-lg border border-border-light transition-colors">
+                      <button 
+                        onClick={() => showWarning()}
+                        className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-900 text-sm font-medium rounded-lg border border-border-light transition-colors"
+                      >
                         Xóa ảnh
                       </button>
                     </div>
@@ -309,7 +381,10 @@ const SettingsPage = () => {
                           type="text"
                           value={profileForm.fullname}
                           onChange={(e) => handleProfileChange('fullname', e.target.value)}
+                          onBlur={(e) => handleProfileBlur('fullname', e.target.value)}
                       placeholder="Nhập họ tên của bạn"
+                          required
+                          error={profileErrors.fullname}
                     />
                     <FormInput
                           id="email"
@@ -317,7 +392,10 @@ const SettingsPage = () => {
                           type="email"
                           value={profileForm.email}
                           onChange={(e) => handleProfileChange('email', e.target.value)}
+                          onBlur={(e) => handleProfileBlur('email', e.target.value)}
                       placeholder="name@example.com"
+                          required
+                          error={profileErrors.email}
                     />
                     <FormInput
                           id="job"
@@ -325,7 +403,9 @@ const SettingsPage = () => {
                           type="text"
                           value={profileForm.job}
                           onChange={(e) => handleProfileChange('job', e.target.value)}
+                          onBlur={(e) => handleProfileBlur('job', e.target.value)}
                       placeholder="Ví dụ: Product Designer"
+                          error={profileErrors.job}
                     />
                     <FormSelect
                           id="location"
@@ -344,9 +424,11 @@ const SettingsPage = () => {
                     label="Câu châm ngôn / Giới thiệu"
                       value={profileForm.bio}
                       onChange={(e) => handleProfileChange('bio', e.target.value)}
+                      onBlur={(e) => handleProfileBlur('bio', e.target.value)}
                     placeholder="Viết một câu ngắn gọn về mục tiêu của bạn..."
                     rows={4}
                       maxLength={150}
+                      error={profileErrors.bio}
                     />
                 </div>
 
@@ -427,6 +509,12 @@ const SettingsPage = () => {
                     Tùy chỉnh trải nghiệm của bạn với các cài đặt về ngôn ngữ, thời gian và hiển thị.
                   </p>
                 </div>
+                {warningMessage && (
+                  <WarningMessage 
+                    message={warningMessage} 
+                    onClose={() => setWarningMessage('')}
+                  />
+                )}
 
                 {/* Region & Language Section */}
                 <div className="flex flex-col gap-8">
@@ -589,6 +677,12 @@ const SettingsPage = () => {
                     Tùy chỉnh cách bạn lập kế hoạch và theo dõi tiến độ mục tiêu cá nhân.
                   </p>
                 </div>
+                {warningMessage && (
+                  <WarningMessage 
+                    message={warningMessage} 
+                    onClose={() => setWarningMessage('')}
+                  />
+                )}
 
                 {/* Task Configuration Section */}
                 <div className="flex flex-col gap-8">
@@ -766,6 +860,12 @@ const SettingsPage = () => {
                     Quản lý cách bạn nhận thông báo và cập nhật từ MyPlanner.
                   </p>
                 </div>
+                {warningMessage && (
+                  <WarningMessage 
+                    message={warningMessage} 
+                    onClose={() => setWarningMessage('')}
+                  />
+                )}
 
                 {/* Email Notifications Section */}
                 <div className="flex flex-col gap-6">
@@ -915,6 +1015,7 @@ const SettingsPage = () => {
                 <div className="flex flex-col sm:flex-row justify-end gap-3 pt-8 mt-2 border-t border-border-light">
                   <button
                     onClick={() => {
+                      showWarning();
                       setNotificationSettings({
                         emailWeeklySummary: true,
                         emailTaskReminders: true,
@@ -951,6 +1052,12 @@ const SettingsPage = () => {
                     Quản lý mật khẩu, xác thực hai yếu tố và các phiên đăng nhập của bạn để giữ tài khoản an toàn.
                   </p>
                 </div>
+                {warningMessage && (
+                  <WarningMessage 
+                    message={warningMessage} 
+                    onClose={() => setWarningMessage('')}
+                  />
+                )}
 
                 {/* Change Password Section */}
                 <div className="flex flex-col gap-6">

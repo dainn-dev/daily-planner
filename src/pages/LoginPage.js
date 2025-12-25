@@ -4,6 +4,7 @@ import PublicHeader from '../components/PublicHeader';
 import PasswordInput from '../components/PasswordInput';
 import ErrorMessage from '../components/ErrorMessage';
 import { validateEmail, validatePassword } from '../utils/formValidation';
+import { authAPI } from '../services/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -31,13 +32,10 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // await loginUser({ email, password });
-      // navigate('/dashboard');
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate('/');
+      const response = await authAPI.login(email, password);
+      if (response.success) {
+        navigate('/daily');
+      }
     } catch (error) {
       setErrors({ submit: error.message || 'Đăng nhập thất bại. Vui lòng thử lại.' });
     } finally {

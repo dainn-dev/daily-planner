@@ -6,12 +6,33 @@ const FormInput = ({
   type = 'text',
   value,
   onChange,
+  onBlur,
   placeholder,
   required = false,
   error,
+  validate,
   className = '',
   ...props
 }) => {
+  const handleBlur = (e) => {
+    if (onBlur) {
+      onBlur(e);
+    }
+    // Auto-validate on blur if validate function is provided
+    if (validate && !error) {
+      const validationError = validate(value);
+      if (validationError && onChange) {
+        // Trigger validation by calling onChange with current value
+        // The parent component should handle the error state
+        const syntheticEvent = {
+          target: { name: id, value, type: 'text' },
+          preventDefault: () => {},
+        };
+        onChange(syntheticEvent);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       {label && (
@@ -31,6 +52,7 @@ const FormInput = ({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
+          onBlur={handleBlur}
           required={required}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${id}-error` : undefined}

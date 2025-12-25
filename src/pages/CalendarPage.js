@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import { userAPI } from '../services/api';
 import {
   getColorClasses,
   getTextColorClasses,
@@ -12,6 +13,7 @@ import {
 const CalendarPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2023, 9, 1)); // October 2023
   const [viewMode, setViewMode] = useState('Tuần'); // 'Tuần' or 'Tháng'
+  const [weekStartDay, setWeekStartDay] = useState('monday'); // 'monday' or 'sunday'
   const [events, setEvents] = useState([
     { id: 1, date: new Date(2023, 9, 2), time: '09:00', title: 'Review thiết kế UI', color: 'green' },
     { id: 2, date: new Date(2023, 9, 4), time: '14:00', title: 'Họp team Product', color: 'blue' },
@@ -300,39 +302,73 @@ const CalendarPage = () => {
     };
   };
 
-  // Generate week view (7 days starting from Monday)
+  // Load user settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await userAPI.getSettings();
+        if (settings?.weekStartDay) {
+          setWeekStartDay(settings.weekStartDay);
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+        // Default to Monday if settings can't be loaded
+        setWeekStartDay('monday');
+      }
+    };
+    loadSettings();
+  }, []);
+
+  // Generate week view based on week start day
   const generateWeek = () => {
     const date = new Date(currentDate);
-    const dayOfWeek = date.getDay();
-    // Convert Sunday (0) to 6, Monday (1) to 0, etc.
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const monday = new Date(date);
-    monday.setDate(date.getDate() - daysToSubtract);
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    let daysToSubtract;
+    if (weekStartDay === 'sunday') {
+      // Start from Sunday
+      daysToSubtract = dayOfWeek;
+    } else {
+      // Start from Monday (default)
+      // Convert Sunday (0) to 6, Monday (1) to 0, etc.
+      daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    }
+    
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - daysToSubtract);
     
     const week = [];
     for (let i = 0; i < 7; i++) {
-      const day = new Date(monday);
-      day.setDate(monday.getDate() + i);
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
       week.push(day);
     }
     
     return week;
   };
 
-  // Generate calendar grid (month view)
+  // Generate calendar grid (month view) based on week start day
   const generateCalendar = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
     // First day of month
     const firstDay = new Date(year, month, 1);
-    // const lastDay = new Date(year, month + 1, 0);
     
-    // Start from Monday (adjust if needed)
+    // Start from week start day
     const startDate = new Date(firstDay);
     const dayOfWeek = firstDay.getDay();
-    // Convert Sunday (0) to 6, Monday (1) to 0, etc.
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    let daysToSubtract;
+    if (weekStartDay === 'sunday') {
+      // Start from Sunday
+      daysToSubtract = dayOfWeek;
+    } else {
+      // Start from Monday (default)
+      // Convert Sunday (0) to 6, Monday (1) to 0, etc.
+      daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    }
+    
     startDate.setDate(firstDay.getDate() - daysToSubtract);
     
     const calendar = [];
@@ -346,6 +382,17 @@ const CalendarPage = () => {
     
     return calendar;
   };
+
+  // Get week days array based on week start day
+  const getWeekDays = () => {
+    if (weekStartDay === 'sunday') {
+      return ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+    } else {
+      return ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+    }
+  };
+
+  const weekDays = getWeekDays();
 
   const calendarDays = viewMode === 'Tuần' ? generateWeek() : generateCalendar();
   const today = new Date();
@@ -368,10 +415,6 @@ const CalendarPage = () => {
              eventDate.getFullYear() === date.getFullYear();
     });
   };
-
-
-  const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
-  // const weekDaysShort = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
   // Get week number
   const getWeekNumber = (date) => {
@@ -645,15 +688,24 @@ const CalendarPage = () => {
             </Link>
           </div>
           <div className="grid grid-cols-7 border-t border-slate-200 bg-white">
-            {weekDays.map((day, idx) => (
-              <div key={idx} className="py-3 px-4 text-center border-r border-slate-200 last:border-r-0">
-                <span className={`text-xs font-bold uppercase tracking-wider ${
-                  idx >= 5 ? 'text-indigo-600' : 'text-slate-500'
-                }`}>
-                  {day}
-                </span>
-              </div>
-            ))}
+            {weekDays.map((day, idx) => {
+              // Highlight weekend days (Saturday and Sunday)
+              // If week starts on Sunday: idx 0 (Sunday) and idx 6 (Saturday)
+              // If week starts on Monday: idx 5 (Saturday) and idx 6 (Sunday)
+              const isWeekend = weekStartDay === 'sunday' 
+                ? (idx === 0 || idx === 6) 
+                : (idx === 5 || idx === 6);
+              
+              return (
+                <div key={idx} className="py-3 px-4 text-center border-r border-slate-200 last:border-r-0">
+                  <span className={`text-xs font-bold uppercase tracking-wider ${
+                    isWeekend ? 'text-indigo-600' : 'text-slate-500'
+                  }`}>
+                    {day}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </header>
         <div className="flex-1 overflow-y-auto bg-white">

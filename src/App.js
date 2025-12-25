@@ -18,6 +18,7 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminUserDetailPage from './pages/AdminUserDetailPage';
 import AdminLogsPage from './pages/AdminLogsPage';
 import AdminLogDetailPage from './pages/AdminLogDetailPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
         <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
         <Route path="/admin/logs" element={<AdminLogsPage />} />
         <Route path="/admin/logs/:fileName" element={<AdminLogDetailPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>
   );

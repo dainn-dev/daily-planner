@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import { validateTitle, validateCategory, validateDate } from '../utils/formValidation';
 
 const GoalsPage = () => {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ const GoalsPage = () => {
     dueDate: '',
     icon: 'flag'
   });
+  const [goalFormErrors, setGoalFormErrors] = useState({});
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -107,7 +109,22 @@ const GoalsPage = () => {
 
   const handleAddGoal = (e) => {
     e.preventDefault();
-    if (goalForm.title.trim() && goalForm.category.trim()) {
+    
+    // Validate form
+    const errors = {};
+    errors.title = validateTitle(goalForm.title, true, 255);
+    errors.category = validateCategory(goalForm.category, true);
+    if (goalForm.dueDate) {
+      errors.dueDate = validateDate(goalForm.dueDate, false, new Date().toISOString().split('T')[0]);
+    }
+
+    // Check if there are any errors
+    const hasErrors = Object.values(errors).some(error => error !== null);
+    if (hasErrors) {
+      setGoalFormErrors(errors);
+      return;
+    }
+
       const newGoal = {
         id: Date.now(),
         title: goalForm.title.trim(),
@@ -124,8 +141,8 @@ const GoalsPage = () => {
         dueDate: '',
         icon: 'flag'
       });
+    setGoalFormErrors({});
       setAddGoalModalOpen(false);
-    }
   };
 
   const handleCloseAddModal = () => {
@@ -136,6 +153,35 @@ const GoalsPage = () => {
       dueDate: '',
       icon: 'flag'
     });
+    setGoalFormErrors({});
+  };
+
+  const handleGoalFormChange = (field, value) => {
+    setGoalForm(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (goalFormErrors[field]) {
+      setGoalFormErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
+
+  const handleGoalFormBlur = (field, value) => {
+    let error = null;
+    switch (field) {
+      case 'title':
+        error = validateTitle(value, true, 255);
+        break;
+      case 'category':
+        error = validateCategory(value, true);
+        break;
+      case 'dueDate':
+        if (value) {
+          error = validateDate(value, false, new Date().toISOString().split('T')[0]);
+        }
+        break;
+      default:
+        break;
+    }
+    setGoalFormErrors(prev => ({ ...prev, [field]: error }));
   };
 
   const iconOptions = [
@@ -369,37 +415,67 @@ const GoalsPage = () => {
                     </label>
                     <input
                       autoFocus
-                      className="w-full rounded-lg border-zinc-200 bg-white text-zinc-900 px-4 py-2.5 text-sm focus:border-zinc-400 focus:bg-white focus:ring-0 placeholder:text-zinc-400 transition-all font-medium shadow-sm hover:border-zinc-300"
+                      className={`w-full rounded-lg bg-white text-zinc-900 px-4 py-2.5 text-sm focus:bg-white focus:ring-0 placeholder:text-zinc-400 transition-all font-medium shadow-sm hover:border-zinc-300 ${
+                        goalFormErrors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-zinc-200 focus:border-zinc-400'
+                      }`}
                       placeholder="Nhập tên mục tiêu..."
                       type="text"
                       value={goalForm.title}
-                      onChange={(e) => setGoalForm(prev => ({ ...prev, title: e.target.value }))}
+                      onChange={(e) => handleGoalFormChange('title', e.target.value)}
+                      onBlur={(e) => handleGoalFormBlur('title', e.target.value)}
                       required
+                      aria-invalid={goalFormErrors.title ? 'true' : 'false'}
+                      aria-describedby={goalFormErrors.title ? 'title-error' : undefined}
                     />
+                    {goalFormErrors.title && (
+                      <p id="title-error" className="text-xs text-red-500 mt-1" role="alert">
+                        {goalFormErrors.title}
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
                       <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Danh mục</label>
                       <input
-                        className="w-full rounded-lg border-zinc-200 bg-white text-zinc-900 px-4 py-2.5 text-sm focus:border-zinc-400 focus:bg-white focus:ring-0 placeholder:text-zinc-400 transition-all font-medium shadow-sm hover:border-zinc-300"
+                        className={`w-full rounded-lg bg-white text-zinc-900 px-4 py-2.5 text-sm focus:bg-white focus:ring-0 placeholder:text-zinc-400 transition-all font-medium shadow-sm hover:border-zinc-300 ${
+                          goalFormErrors.category ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-zinc-200 focus:border-zinc-400'
+                        }`}
                         placeholder="Ví dụ: Kỹ năng"
                         type="text"
                         value={goalForm.category}
-                        onChange={(e) => setGoalForm(prev => ({ ...prev, category: e.target.value }))}
+                        onChange={(e) => handleGoalFormChange('category', e.target.value)}
+                        onBlur={(e) => handleGoalFormBlur('category', e.target.value)}
                         required
+                        aria-invalid={goalFormErrors.category ? 'true' : 'false'}
+                        aria-describedby={goalFormErrors.category ? 'category-error' : undefined}
                       />
+                      {goalFormErrors.category && (
+                        <p id="category-error" className="text-xs text-red-500 mt-1" role="alert">
+                          {goalFormErrors.category}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Ngày đến hạn</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-zinc-400 text-[18px] pointer-events-none">event</span>
                         <input
-                          className="w-full rounded-lg border-zinc-200 bg-white text-zinc-900 pl-10 pr-4 py-2.5 text-sm focus:border-zinc-400 focus:bg-white focus:ring-0 transition-all cursor-pointer hover:bg-zinc-50 shadow-sm"
+                          className={`w-full rounded-lg bg-white text-zinc-900 pl-10 pr-4 py-2.5 text-sm focus:bg-white focus:ring-0 transition-all cursor-pointer hover:bg-zinc-50 shadow-sm ${
+                            goalFormErrors.dueDate ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-zinc-200 focus:border-zinc-400'
+                          }`}
                           type="date"
                           value={goalForm.dueDate}
-                          onChange={(e) => setGoalForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                          onChange={(e) => handleGoalFormChange('dueDate', e.target.value)}
+                          onBlur={(e) => handleGoalFormBlur('dueDate', e.target.value)}
+                          aria-invalid={goalFormErrors.dueDate ? 'true' : 'false'}
+                          aria-describedby={goalFormErrors.dueDate ? 'dueDate-error' : undefined}
                         />
                       </div>
+                      {goalFormErrors.dueDate && (
+                        <p id="dueDate-error" className="text-xs text-red-500 mt-1" role="alert">
+                          {goalFormErrors.dueDate}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">

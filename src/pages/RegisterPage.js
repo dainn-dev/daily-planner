@@ -5,6 +5,7 @@ import PasswordInput from '../components/PasswordInput';
 import ErrorMessage from '../components/ErrorMessage';
 import SuccessMessage from '../components/SuccessMessage';
 import { validateEmail, validatePassword, validateConfirmPassword, validateName } from '../utils/formValidation';
+import { authAPI } from '../services/api';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -62,17 +63,20 @@ const RegisterPage = () => {
     setSuccessMessage('');
 
     try {
-      // TODO: Replace with actual API call
-      // await registerUser(formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccessMessage('Đăng ký thành công! Đang chuyển hướng...');
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500);
+      const response = await authAPI.register(formData);
+      if (response.success) {
+        setSuccessMessage('Đăng ký thành công! Đang chuyển hướng...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
+      }
     } catch (error) {
-      setErrors({ submit: error.message || 'Đăng ký thất bại. Vui lòng thử lại.' });
+      // Handle validation errors from API
+      if (error.errors) {
+        setErrors(error.errors);
+      } else {
+        setErrors({ submit: error.message || 'Đăng ký thất bại. Vui lòng thử lại.' });
+      }
     } finally {
       setIsSubmitting(false);
     }

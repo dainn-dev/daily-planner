@@ -1,19 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import { DEFAULT_TAGS } from '../constants/tasks';
+import { tasksAPI, notificationsAPI, eventsAPI } from '../services/api';
 
 const DailyPage = () => {
-  const [tasks, setTasks] = useState([
-    { id: 1, text: 'Gửi email báo cáo cho khách hàng A', completed: true, tags: ['Routine'] },
-    { id: 2, text: 'Review code module thanh toán', completed: false, priority: 'Cao', tags: ['Dev'] },
-    { id: 3, text: 'Đặt lịch khám sức khỏe định kỳ', completed: false, tags: ['Cá nhân'] },
-    { id: 4, text: 'Chuẩn bị tài liệu cho buổi họp sáng mai', completed: false, priority: 'Trung bình', tags: [] },
-  ]);
-
+  const [tasks, setTasks] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [mainGoal, setMainGoal] = useState(null);
   const [newTask, setNewTask] = useState('');
-  const [mainGoalCompleted, setMainGoalCompleted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [addTaskModalOpen, setAddTaskModalOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({
@@ -61,31 +57,71 @@ const DailyPage = () => {
     }
   ]);
 
+  // Load tasks and main goal on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Load tasks for today
+      const tasksData = await tasksAPI.getTasks({ date: today });
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+      
+      // Load events for today
+      try {
+        const eventsData = await eventsAPI.getEvents({ date: today });
+        setEvents(Array.isArray(eventsData) ? eventsData : []);
+      } catch (error) {
+        // Events might not exist, that's okay
+        setEvents([]);
+      }
+      
+      // Load main goal
+      try {
+        const mainGoalData = await tasksAPI.getMainGoal(today);
+        setMainGoal(mainGoalData);
+      } catch (error) {
+        // Main goal might not exist, that's okay
+        setMainGoal(null);
+      }
+      
+      // Load notifications
+      try {
+        const notificationsData = await notificationsAPI.getNotifications({ limit: 20 });
+        setNotifications(notificationsData.notifications || []);
+      } catch (error) {
+        console.error('Failed to load notifications:', error);
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    }
+  };
+
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const handleTaskToggle = (id) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
-  };
-
-  const handleAddTask = (e) => {
-    e.preventDefault();
-    if (newTask.trim()) {
-      setTasks([...tasks, {
-        id: Date.now(),
-        text: newTask.trim(),
-        completed: false,
-        tags: []
-      }]);
-      setNewTask('');
+  const handleTaskToggle = async (id) => {
+    try {
+      await tasksAPI.toggleTask(id);
+      setTasks(tasks.map(task => 
+        task.id === id ? { ...task, completed: !task.completed } : task
+      ));
+    } catch (error) {
+      console.error('Failed to toggle task:', error);
     }
   };
 
-  const handleDeleteTask = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  const handleDeleteTask = async (id) => {
+    try {
+      await tasksAPI.deleteTask(id);
+      setTasks(tasks.filter(task => task.id !== id));
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
   };
 
   const handleTagToggle = (tag) => {
@@ -97,28 +133,33 @@ const DailyPage = () => {
     }));
   };
 
-  const handleCreateTask = (e) => {
+  const handleCreateTask = async (e) => {
     e.preventDefault();
     if (taskForm.name.trim()) {
-      const newTaskItem = {
-        id: Date.now(),
-        text: taskForm.name.trim(),
-        completed: false,
-        description: taskForm.description,
-        dueDate: taskForm.dueDate,
-        reminderTime: taskForm.reminderTime,
-        tags: taskForm.tags,
-        priority: taskForm.tags.includes('Công việc') ? 'Cao' : undefined
-      };
-      setTasks([...tasks, newTaskItem]);
-      setTaskForm({
-        name: '',
-        description: '',
-        dueDate: '',
-        reminderTime: '',
-        tags: []
-      });
-      setAddTaskModalOpen(false);
+      try {
+        const priority = taskForm.tags.includes('Công việc') ? 'high' : undefined;
+        
+        const newTaskData = await tasksAPI.createTask({
+          text: taskForm.name.trim(),
+          description: taskForm.description,
+          dueDate: taskForm.dueDate || new Date().toISOString().split('T')[0],
+          reminderTime: taskForm.reminderTime,
+          tags: taskForm.tags,
+          priority: priority
+        });
+        
+        setTasks([...tasks, newTaskData]);
+        setTaskForm({
+          name: '',
+          description: '',
+          dueDate: '',
+          reminderTime: '',
+          tags: []
+        });
+        setAddTaskModalOpen(false);
+      } catch (error) {
+        console.error('Failed to create task:', error);
+      }
     }
   };
 
@@ -216,35 +257,49 @@ const DailyPage = () => {
             </div>
 
             {/* Main Goal Card */}
-            <div className="w-full">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 rounded-xl border border-blue-100 bg-white p-5 shadow-lg shadow-blue-50 relative overflow-hidden group">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
-                <div className="flex flex-col gap-1 z-10 pl-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="material-symbols-outlined text-primary text-sm">flag</span>
-                    <p className="text-primary text-xs font-bold uppercase tracking-wider">Mục tiêu chính</p>
+            {mainGoal && (
+              <div className="w-full">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 rounded-xl border border-blue-100 bg-white p-5 shadow-lg shadow-blue-50 relative overflow-hidden group">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+                  <div className="flex flex-col gap-1 z-10 pl-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="material-symbols-outlined text-primary text-sm">flag</span>
+                      <p className="text-primary text-xs font-bold uppercase tracking-wider">Mục tiêu chính</p>
+                    </div>
+                    <p className={`text-[#111418] text-xl font-bold leading-tight group-hover:text-primary transition-colors ${mainGoal.completed ? 'line-through text-gray-400' : ''}`}>
+                      {mainGoal.text}
+                    </p>
                   </div>
-                  <p className={`text-[#111418] text-xl font-bold leading-tight group-hover:text-primary transition-colors ${mainGoalCompleted ? 'line-through text-gray-400' : ''}`}>
-                    Hoàn thành báo cáo quý cho cuộc họp ban giám đốc
-                  </p>
+                  <label className="relative flex cursor-pointer items-center gap-3 z-10">
+                    <span className="text-gray-500 text-sm hidden sm:block">Đánh dấu hoàn thành</span>
+                    <div className={`relative flex h-[31px] w-[51px] items-center rounded-full border-none p-0.5 transition-colors ${mainGoal.completed ? 'bg-[#1380ec]' : 'bg-gray-200'}`}>
+                      <div 
+                        className={`h-[27px] w-[27px] rounded-full bg-white shadow-md transition-transform ${mainGoal.completed ? 'translate-x-[20px]' : 'translate-x-0'}`}
+                      />
+                      <input 
+                        className="peer sr-only" 
+                        type="checkbox"
+                        checked={mainGoal.completed || false}
+                        onChange={async (e) => {
+                          try {
+                            const today = new Date().toISOString().split('T')[0];
+                            await tasksAPI.updateMainGoal({
+                              text: mainGoal.text,
+                              completed: e.target.checked,
+                              date: today
+                            });
+                            setMainGoal({ ...mainGoal, completed: e.target.checked });
+                          } catch (error) {
+                            console.error('Failed to update main goal:', error);
+                          }
+                        }}
+                        aria-label="Đánh dấu mục tiêu chính hoàn thành"
+                      />
+                    </div>
+                  </label>
                 </div>
-                <label className="relative flex cursor-pointer items-center gap-3 z-10">
-                  <span className="text-gray-500 text-sm hidden sm:block">Đánh dấu hoàn thành</span>
-                  <div className={`relative flex h-[31px] w-[51px] items-center rounded-full border-none p-0.5 transition-colors ${mainGoalCompleted ? 'bg-[#1380ec]' : 'bg-gray-200'}`}>
-                    <div 
-                      className={`h-[27px] w-[27px] rounded-full bg-white shadow-md transition-transform ${mainGoalCompleted ? 'translate-x-[20px]' : 'translate-x-0'}`}
-                    />
-                    <input 
-                      className="peer sr-only" 
-                      type="checkbox"
-                      checked={mainGoalCompleted}
-                      onChange={(e) => setMainGoalCompleted(e.target.checked)}
-                      aria-label="Đánh dấu mục tiêu chính hoàn thành"
-                    />
-                  </div>
-                </label>
               </div>
-            </div>
+            )}
 
             {/* Schedule and Tasks Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-4">
@@ -254,79 +309,73 @@ const DailyPage = () => {
                   <span className="material-symbols-outlined text-[#111418]">schedule</span>
                   <h2 className="text-[#111418] text-xl font-bold">Lịch trình</h2>
                 </div>
-                <div className="flex flex-col gap-4">
-                  {/* Morning Run - Completed */}
-                  <div className="flex gap-4 group">
-                    <div className="flex flex-col items-center pt-1 w-12 flex-shrink-0">
-                      <span className="text-gray-400 text-sm font-medium">08:00</span>
-                      <div className="w-px h-full bg-gray-200 mt-2"></div>
-                    </div>
-                    <div className="flex-1 pb-6">
-                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <p className="text-gray-400 font-medium line-through">Chạy bộ buổi sáng</p>
-                        <div className="flex items-center gap-1 mt-2 text-gray-400 text-xs">
-                          <span className="material-symbols-outlined text-[14px]">location_on</span>
-                          <span>Công viên</span>
-                        </div>
-                      </div>
-                    </div>
+                {events.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 bg-white rounded-lg border border-gray-200">
+                    <span className="material-symbols-outlined text-gray-300 text-5xl mb-3">event_busy</span>
+                    <p className="text-gray-500 text-sm font-medium text-center">Chưa có sự kiện nào trong ngày</p>
+                    <p className="text-gray-400 text-xs text-center mt-1">Thêm sự kiện mới từ trang Lịch biểu</p>
                   </div>
-
-                  {/* Team Meeting - Active */}
-                  <div className="flex gap-4 group">
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {events.map((event, index) => {
+                      const currentTime = new Date();
+                      const eventTime = event.time_from ? new Date(`${event.date}T${event.time_from}`) : null;
+                      const isActive = eventTime && eventTime <= currentTime && (!event.time_to || new Date(`${event.date}T${event.time_to}`) >= currentTime);
+                      const isPast = eventTime && eventTime < currentTime && (!isActive);
+                      
+                      return (
+                        <div key={event.id} className="flex gap-4 group">
                     <div className="flex flex-col items-center pt-1 w-12 flex-shrink-0">
-                      <span className="text-[#111418] text-sm font-bold">10:00</span>
+                            <span className={`text-sm font-medium ${isActive ? 'text-[#111418] font-bold' : isPast ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {event.time_from ? event.time_from.substring(0, 5) : 'Cả ngày'}
+                            </span>
+                            {index < events.length - 1 && (
                       <div className="w-px h-full bg-gray-200 mt-2"></div>
+                            )}
                     </div>
                     <div className="flex-1 pb-6">
-                      <div className="bg-white p-4 rounded-lg border-l-4 border-l-primary shadow-md shadow-gray-100">
+                            <div className={`p-4 rounded-lg border ${
+                              isActive 
+                                ? 'bg-white border-l-4 border-l-primary shadow-md shadow-gray-100' 
+                                : isPast
+                                ? 'bg-gray-50 border border-gray-200'
+                                : 'bg-white border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer'
+                            }`}>
                         <div className="flex justify-between items-start">
-                          <p className="text-[#111418] font-bold text-lg">Họp team Marketing</p>
+                                <p className={`font-medium ${isActive ? 'text-[#111418] font-bold text-lg' : isPast ? 'text-gray-400 line-through' : 'text-[#111418]'}`}>
+                                  {event.title}
+                                </p>
+                                {isActive && (
                           <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded">Đang diễn ra</span>
+                                )}
+                              </div>
+                              {event.description && (
+                                <p className={`text-sm mt-1 ${isPast ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {event.description}
+                                </p>
+                              )}
+                              {(event.address || event.platform) && (
+                                <div className="flex items-center gap-1 mt-2 text-gray-500 text-xs">
+                                  {event.location_type === 'online' ? (
+                                    <>
+                                      <span className="material-symbols-outlined text-[14px]">videocam</span>
+                                      <span>{event.platform}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="material-symbols-outlined text-[14px]">location_on</span>
+                                      <span>{event.address}</span>
+                                    </>
+                                  )}
                         </div>
-                        <p className="text-gray-500 text-sm mt-1">Review KPI tháng 10 và lên plan tháng 11</p>
-                        <div className="flex items-center gap-3 mt-3">
-                          <div className="flex -space-x-2">
-                            <div 
-                              className="size-6 rounded-full bg-gray-300 border border-white bg-cover bg-center" 
-                              style={{
-                                backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAj-399vd1HQXp1YrcnzEKF8yrWnYtfzgN_oxOJuA-jADz6Aylvemq0KJvVxGck7o8K0ZMPwhPOUOhnapKb81JxoLiB1YsrJUJLQazY85ilnYAPfK1fLIQ74fgYwFkoj26sqr_nVd3jUKyHcmrDPVsJlW2encAOO3SVnrx0TTfj9CXURYn1HvMAjUSuCUbXijEqn6sWW09enMGFwIJqwiaqXsZBdF1EoRHasmWbW21ZDIUtSxL-4e1ooFmbtYiXe-Cnlf5BgnUPySs0")'
-                              }}
-                              aria-label="Team member 1"
-                            />
-                            <div 
-                              className="size-6 rounded-full bg-gray-300 border border-white bg-cover bg-center" 
-                              style={{
-                                backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDENeKXc4H7FwO0ti1bd6RysdILZdH07zF2fmCSR3mtPvM2PUpHuGLavpmwMerBdxNeKO_WDvID4xVbcea7YljLtYQby8mkU_3eJjELwo0PZs4NTurSrCusMBo2PNYRcLrm3bbhLGNfdPhM4DK4JyPUTwdbO0rRakkM9RN1Zn-YcU5ympZBkavG0BI5pa3HUCO5foFhnfqSSUPtcJjDz58nynazKD9yX4I4iA5jAB7D_H-x6vlFjHoq8bm-ETjWW3wlw45427guBMQP")'
-                              }}
-                              aria-label="Team member 2"
-                            />
-                            <div className="size-6 rounded-full bg-gray-300 border border-white flex items-center justify-center text-[10px] text-gray-600 font-medium">
-                              +3
+                              )}
                             </div>
                           </div>
-                          <span className="text-gray-500 text-xs">Room 301</span>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-
-                  {/* Interview - Upcoming */}
-                  <div className="flex gap-4 group">
-                    <div className="flex flex-col items-center pt-1 w-12 flex-shrink-0">
-                      <span className="text-gray-500 text-sm font-medium">14:00</span>
-                    </div>
-                    <div className="flex-1 pb-6">
-                      <div className="bg-white p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer">
-                        <p className="text-[#111418] font-medium">Phỏng vấn ứng viên Designer</p>
-                        <div className="flex items-center gap-1 mt-2 text-gray-500 text-xs">
-                          <span className="material-symbols-outlined text-[14px]">videocam</span>
-                          <span>Google Meet</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Tasks Section */}
@@ -347,20 +396,35 @@ const DailyPage = () => {
                 </div>
 
                 {/* Add Task Input */}
-                <form onSubmit={handleAddTask} className="relative group mb-2">
+                <div className="relative group mb-2">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="material-symbols-outlined text-gray-400">add</span>
                   </div>
                   <input 
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg leading-5 bg-white text-[#111418] placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary sm:text-sm transition-all" 
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg leading-5 bg-white text-[#111418] placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary sm:text-sm transition-all cursor-pointer" 
                     placeholder="Thêm nhiệm vụ mới..." 
                     type="text"
-                    value={newTask}
-                    onChange={(e) => setNewTask(e.target.value)}
+                    readOnly
+                    onClick={() => {
+                      setTaskForm(prev => ({ ...prev, name: '' }));
+                      setAddTaskModalOpen(true);
+                    }}
+                    onFocus={(e) => {
+                      e.target.blur();
+                      setTaskForm(prev => ({ ...prev, name: '' }));
+                      setAddTaskModalOpen(true);
+                    }}
                   />
-                </form>
+                </div>
 
                 {/* Tasks List */}
+                {tasks.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 bg-white rounded-lg border border-gray-200">
+                    <span className="material-symbols-outlined text-gray-300 text-5xl mb-3">task_alt</span>
+                    <p className="text-gray-500 text-sm font-medium text-center">Chưa có nhiệm vụ nào</p>
+                    <p className="text-gray-400 text-xs text-center mt-1">Thêm nhiệm vụ mới để bắt đầu ngày làm việc</p>
+                  </div>
+                ) : (
                 <div className="flex flex-col gap-3">
                   {tasks.map((task) => (
                     <div 
@@ -390,7 +454,7 @@ const DailyPage = () => {
                                 {task.priority}
                               </span>
                             )}
-                            {task.tags.map((tag, idx) => (
+                              {task.tags && task.tags.map((tag, idx) => (
                               <span key={idx} className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
                                 {tag}
                               </span>
@@ -408,6 +472,7 @@ const DailyPage = () => {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             </div>
           </div>
